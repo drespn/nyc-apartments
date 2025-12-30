@@ -80,14 +80,14 @@ func main() {
 	log.Println("Running initial poll...")
 	poll()
 
-	// Set up cron scheduler for :15 and :45
+	// Set up cron scheduler for every 30 minutes
 	c := cron.New()
-	_, err = c.AddFunc("15,45 * * * *", poll)
+	_, err = c.AddFunc("*/30 * * * *", poll)
 	if err != nil {
 		log.Fatalf("Failed to add cron job: %v", err)
 	}
 	c.Start()
-	log.Println("Scheduler started. Polling at :15 and :45 past each hour.")
+	log.Println("Scheduler started. Polling every 30 minutes.")
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
