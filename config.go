@@ -7,8 +7,10 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	DiscordWebhookURL string
-	DatabasePath      string
+	DiscordWebhookURL       string
+	DiscordErrorWebhookURL  string
+	DiscordStatusWebhookURL string
+	DatabasePath            string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -23,8 +25,13 @@ func LoadConfig() (*Config, error) {
 		dbPath = "./apartments.db"
 	}
 
+	errorWebhookURL := os.Getenv("DISCORD_ERROR_WEBHOOK_URL")
+	statusWebhookURL := os.Getenv("DISCORD_STATUS_WEBHOOK_URL")
+
 	return &Config{
-		DiscordWebhookURL: webhookURL,
-		DatabasePath:      dbPath,
+		DiscordWebhookURL:       webhookURL,
+		DiscordErrorWebhookURL:  errorWebhookURL,
+		DiscordStatusWebhookURL: statusWebhookURL,
+		DatabasePath:            dbPath,
 	}, nil
 }

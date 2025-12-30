@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -30,7 +31,7 @@ func main() {
 
 	// Initialize clients
 	streetEasyClient := NewStreetEasyClient()
-	discordClient := NewDiscordClient(cfg.DiscordWebhookURL)
+	discordClient := NewDiscordClient(cfg.DiscordWebhookURL, cfg.DiscordErrorWebhookURL, cfg.DiscordStatusWebhookURL)
 
 	// Create poll function
 	poll := func() {
@@ -39,6 +40,7 @@ func main() {
 		listings, err := streetEasyClient.FetchListings()
 		if err != nil {
 			log.Printf("Error fetching listings: %v", err)
+			discordClient.SendError(fmt.Sprintf("Failed to fetch listings: %v", err))
 			return
 		}
 		log.Printf("Fetched %d total listings", len(listings))
@@ -48,6 +50,7 @@ func main() {
 			isNew, err := storage.IsNew(listing.ID)
 			if err != nil {
 				log.Printf("Error checking listing %s: %v", listing.ID, err)
+				discordClient.SendError(fmt.Sprintf("Error checking listing %s: %v", listing.ID, err))
 				continue
 			}
 
@@ -55,12 +58,14 @@ func main() {
 				// Send Discord notification
 				if err := discordClient.SendListing(listing); err != nil {
 					log.Printf("Error sending Discord notification for %s: %v", listing.ID, err)
+					discordClient.SendError(fmt.Sprintf("Error sending notification for %s: %v", listing.ID, err))
 					continue
 				}
 
 				// Mark as seen
 				if err := storage.MarkSeen(listing); err != nil {
 					log.Printf("Error marking listing %s as seen: %v", listing.ID, err)
+					discordClient.SendError(fmt.Sprintf("Error marking listing %s as seen: %v", listing.ID, err))
 					continue
 				}
 
@@ -74,6 +79,12 @@ func main() {
 		}
 
 		log.Printf("Poll complete. Found %d new listings.", newCount)
+
+		// Send status update
+		if err := discordClient.SendStatus(len(listings), newCount, listings); err != nil {
+			log.Printf("Error sending status update: %v", err)
+			discordClient.SendError(fmt.Sprintf("Error sending status update: %v", err))
+		}
 	}
 
 	// Run poll immediately on startup
@@ -84,6 +95,7 @@ func main() {
 	c := cron.New()
 	_, err = c.AddFunc("*/30 * * * *", poll)
 	if err != nil {
+		discordClient.SendError(fmt.Sprintf("Failed to add cron job: %v", err))
 		log.Fatalf("Failed to add cron job: %v", err)
 	}
 	c.Start()
