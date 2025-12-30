@@ -64,10 +64,13 @@ func (d *DiscordClient) SendListing(listing Listing) error {
 
 // buildEmbed constructs the Discord embed for a listing
 func (d *DiscordClient) buildEmbed(listing Listing) map[string]interface{} {
-	// Build title: "123 Main Street, Unit 4B"
-	title := listing.Street
+	// Title is the neighborhood (what you care about most)
+	title := listing.AreaName
+
+	// Description is the address
+	address := listing.Street
 	if listing.Unit != "" {
-		title = fmt.Sprintf("%s, Unit %s", listing.Street, listing.Unit)
+		address = fmt.Sprintf("%s, Unit %s", listing.Street, listing.Unit)
 	}
 
 	// Build listing URL
@@ -123,14 +126,14 @@ func (d *DiscordClient) buildEmbed(listing Listing) map[string]interface{} {
 	embed := map[string]interface{}{
 		"title":       title,
 		"url":         listingURL,
-		"description": listing.AreaName,
+		"description": address,
 		"color":       discordEmbedColor,
 		"fields":      fields,
 	}
 
 	// Add thumbnail if photo available
 	if listing.PhotoKey != "" {
-		photoURL := fmt.Sprintf("https://photos.streeteasy.com/%s/webp/large", listing.PhotoKey)
+		photoURL := fmt.Sprintf("https://photos.zillowstatic.com/fp/%s-se_extra_large_1500_800.webp", listing.PhotoKey)
 		embed["thumbnail"] = map[string]interface{}{
 			"url": photoURL,
 		}

@@ -44,6 +44,7 @@ func main() {
 		log.Printf("Fetched %d total listings", len(listings))
 
 		newCount := 0
+		maxNewListings := 2 // TODO: Remove this limit after testing
 		for _, listing := range listings {
 			isNew, err := storage.IsNew(listing.ID)
 			if err != nil {
@@ -52,6 +53,12 @@ func main() {
 			}
 
 			if isNew {
+				// TODO: Remove this limit after testing
+				if newCount >= maxNewListings {
+					log.Printf("Reached test limit of %d new listings, stopping", maxNewListings)
+					break
+				}
+
 				// Send Discord notification
 				if err := discordClient.SendListing(listing); err != nil {
 					log.Printf("Error sending Discord notification for %s: %v", listing.ID, err)
@@ -80,14 +87,14 @@ func main() {
 	log.Println("Running initial poll...")
 	poll()
 
-	// Set up cron scheduler for :15 and :45
+	// Set up cron scheduler for every 30 minutes
 	c := cron.New()
-	_, err = c.AddFunc("15,45 * * * *", poll)
+	_, err = c.AddFunc("*/30 * * * *", poll)
 	if err != nil {
 		log.Fatalf("Failed to add cron job: %v", err)
 	}
 	c.Start()
-	log.Println("Scheduler started. Polling at :15 and :45 past each hour.")
+	log.Println("Scheduler started. Polling every 30 minutes.")
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
