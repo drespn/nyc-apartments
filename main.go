@@ -1,8 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -13,33 +18,84 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-
 	log.Printf("Config loaded. Database path: %s", cfg.DatabasePath)
 
-	// Test: Fetch listings from StreetEasy
-	log.Println("Fetching listings from StreetEasy...")
-	client := NewStreetEasyClient()
-	listings, err := client.FetchListings()
+	// Initialize storage
+	storage, err := NewStorage(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Failed to fetch listings: %v", err)
+		log.Fatalf("Failed to initialize storage: %v", err)
 	}
+	defer storage.Close()
+	log.Println("Database initialized")
 
-	log.Printf("Found %d listings", len(listings))
+	// Initialize clients
+	streetEasyClient := NewStreetEasyClient()
+	discordClient := NewDiscordClient(cfg.DiscordWebhookURL)
 
-	// Print first 5 listings as a sample
-	for i, listing := range listings {
-		if i >= 5 {
-			break
+	// Create poll function
+	poll := func() {
+		log.Println("Starting poll...")
+
+		listings, err := streetEasyClient.FetchListings()
+		if err != nil {
+			log.Printf("Error fetching listings: %v", err)
+			return
 		}
-		fmt.Printf("\n--- Listing %d ---\n", i+1)
-		fmt.Printf("ID: %s\n", listing.ID)
-		fmt.Printf("Address: %s, Unit %s\n", listing.Street, listing.Unit)
-		fmt.Printf("Area: %s\n", listing.AreaName)
-		fmt.Printf("Price: $%d/mo\n", listing.Price)
-		fmt.Printf("Bedrooms: %d\n", listing.BedroomCount)
-		fmt.Printf("Bathrooms: %d full, %d half\n", listing.FullBathroomCount, listing.HalfBathroomCount)
-		fmt.Printf("URL: https://streeteasy.com%s\n", listing.URLPath)
+		log.Printf("Fetched %d total listings", len(listings))
+
+		newCount := 0
+		for _, listing := range listings {
+			isNew, err := storage.IsNew(listing.ID)
+			if err != nil {
+				log.Printf("Error checking listing %s: %v", listing.ID, err)
+				continue
+			}
+
+			if isNew {
+				// Send Discord notification
+				if err := discordClient.SendListing(listing); err != nil {
+					log.Printf("Error sending Discord notification for %s: %v", listing.ID, err)
+					continue
+				}
+
+				// Mark as seen
+				if err := storage.MarkSeen(listing); err != nil {
+					log.Printf("Error marking listing %s as seen: %v", listing.ID, err)
+					continue
+				}
+
+				log.Printf("New listing: %s, %s - $%d/mo (%s)",
+					listing.Street, listing.Unit, listing.Price, listing.AreaName)
+				newCount++
+
+				// Rate limit: wait 500ms between Discord messages
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+
+		log.Printf("Poll complete. Found %d new listings.", newCount)
 	}
 
-	log.Println("\nSetup complete!")
+	// Run poll immediately on startup
+	log.Println("Running initial poll...")
+	poll()
+
+	// Set up cron scheduler for :15 and :45
+	c := cron.New()
+	_, err = c.AddFunc("15,45 * * * *", poll)
+	if err != nil {
+		log.Fatalf("Failed to add cron job: %v", err)
+	}
+	c.Start()
+	log.Println("Scheduler started. Polling at :15 and :45 past each hour.")
+
+	// Wait for shutdown signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	sig := <-sigChan
+	log.Printf("Received signal %v, shutting down...", sig)
+
+	c.Stop()
+	log.Println("Scheduler stopped. Goodbye!")
 }
