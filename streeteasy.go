@@ -162,8 +162,7 @@ func (c *StreetEasyClient) buildRequestBody() map[string]interface{} {
 			"filters": map[string]interface{}{
 				"rentalStatus": "ACTIVE",
 				"areas": []int{
-					101, 103, 104, 105, 106, 107, 108, 109, 110, 112, 113, 115, 116, 117,
-					120, 122, 130, 131, 132, 133, 136, 141, 146, 152, 157, 158, 162, 478,
+					104, 105, 106, 113, 115, 116, 117, 146, 157, 158, 162,
 				},
 				"buildingType": []string{"RENTAL"},
 				"price": map[string]interface{}{
