@@ -165,10 +165,17 @@ func (c *StreetEasyClient) buildRequestBody() map[string]interface{} {
 					101, 103, 104, 105, 106, 107, 108, 109, 110, 112, 113, 115, 116, 117,
 					120, 122, 130, 131, 132, 133, 136, 141, 146, 152, 157, 158, 162, 478,
 				},
+				"buildingType": []string{"RENTAL"},
 				"price": map[string]interface{}{
-					"lowerBound": 2000,
-					"upperBound": 2750,
+					"lowerBound": 1750,
+					"upperBound": 9000,
 				},
+				"bedrooms": map[string]interface{}{
+					"lowerBound": 2,
+					"upperBound": 3,
+				},
+				"amenities": []string{"LAUNDRY", "PRIVATE_OUTDOOR_SPACE"},
+				"optionalAmenities": []string{"WASHER_DRYER"},
 				"boundingBox": map[string]interface{}{
 					"topLeft": map[string]interface{}{
 						"latitude":  40.774,
