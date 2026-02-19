@@ -170,7 +170,7 @@ func (c *StreetEasyClient) buildRequestBody() map[string]interface{} {
 					"upperBound": 9000,
 				},
 				"bedrooms": map[string]interface{}{
-					"lowerBound": 2,
+					"lowerBound": 3,
 					"upperBound": 3,
 				},
 				"amenities": []string{"LAUNDRY", "PRIVATE_OUTDOOR_SPACE"},

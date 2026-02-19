@@ -22,7 +22,7 @@ func LoadConfig() (*Config, error) {
 
 	dbPath := os.Getenv("DATABASE_PATH")
 	if dbPath == "" {
-		dbPath = "./apartments.db"
+		dbPath = "/data/apartments.db"
 	}
 
 	errorWebhookURL := os.Getenv("DISCORD_ERROR_WEBHOOK_URL")
